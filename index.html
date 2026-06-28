@@ -44,30 +44,55 @@
         </div>
     </div>
 
-   <script>
-    // 1. Initialize Supabase correctly
+  <script>
+    // 1. Initialize Supabase
     const SUPABASE_URL = 'https://jfzncgdujhdnnhrrnzki.supabase.co';
     const ANON_KEY = 'sb_publishable_UDpdCq_sJg9FDatJaM2V_g_q8G8uxSI';
-    const supabase = window.supabase.createClient(SUPABASE_URL, ANON_KEY);
+    const supabase = supabase.createClient(SUPABASE_URL, ANON_KEY);
 
-    // 2. Wrap everything in functions so they are globally accessible
-    window.signUp = async function() {
+    // 2. Define functions so they are available to the button clicks
+    async function signUp() {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) alert(error.message); else alert('Check your email!');
-    };
+    }
 
-    window.signIn = async function() {
+    async function signIn() {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) alert(error.message); else alert('Signed in successfully!');
-    };
+    }
 
-    window.executeTransmission = async function() {
-        // ... (rest of your executeTransmission code)
-    };
+    async function executeTransmission() {
+        const input = document.getElementById('userInput');
+        const canvas = document.getElementById('chatCanvas');
+        const text = input.value.trim();
+        if(!text) return;
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { alert('Please sign in first!'); return; }
+
+        canvas.innerHTML += `<div class="message-bubble user">${text}</div>`;
+        input.value = '';
+
+        try {
+            const response = await fetch('https://jfzncgdujhdnnhrrnzki.supabase.co/functions/v1/chat', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}` 
+                },
+                body: JSON.stringify({ message: text })
+            });
+            
+            const data = await response.json();
+            canvas.innerHTML += `<div class="message-bubble ai">${data.reply || data.error}</div>`;
+        } catch (err) {
+            console.error(err);
+        }
+    }
 </script>
 </body>
 </html>
