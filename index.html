@@ -12,10 +12,10 @@
             --border-color: rgba(255, 255, 255, 0.06);
             --text-main: #f3f1f8;
             --accent-primary: #6366f1;
-            --glass-blur: blur(20px);
         }
-        body { background: var(--bg-gradient); color: var(--text-main); font-family: sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding-top: 100px; }
-        .app-window { width: 460px; height: 600px; background: var(--panel-bg); backdrop-filter: var(--glass-blur); border: 1px solid var(--border-color); border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; }
+        body { background: var(--bg-gradient); color: var(--text-main); font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 50px; }
+        .auth-box { margin-bottom: 20px; display: flex; gap: 10px; }
+        .app-window { width: 460px; height: 500px; background: var(--panel-bg); backdrop-filter: blur(20px); border: 1px solid var(--border-color); border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; }
         .chat-canvas { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
         .message-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 0.95rem; }
         .user { background: var(--accent-primary); align-self: flex-end; }
@@ -27,9 +27,16 @@
 </head>
 <body>
 
+    <div class="auth-box">
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="signUp()">Sign Up</button>
+        <button onclick="signIn()">Sign In</button>
+    </div>
+
     <div class="app-window">
         <div class="chat-canvas" id="chatCanvas">
-            <div class="message-bubble ai">Cloud Engine initialized. Awaiting secure transmission.</div>
+            <div class="message-bubble ai">Welcome. Please Sign In to begin.</div>
         </div>
         <div class="input-dock">
             <input type="text" id="userInput" placeholder="Ask anything..." onkeydown="if(event.key === 'Enter') executeTransmission()">
@@ -38,8 +45,23 @@
     </div>
 
     <script>
-        // Paste your anon key here
+        const SUPABASE_URL = 'https://jfzncgdujhdnnhrrnzki.supabase.co';
         const ANON_KEY = 'sb_publishable_UDpdCq_sJg9FDatJaM2V_g_q8G8uxSI';
+        const supabase = supabase.createClient(SUPABASE_URL, ANON_KEY);
+
+        async function signUp() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await supabase.auth.signUp({ email, password });
+            if (error) alert(error.message); else alert('Check your email!');
+        }
+
+        async function signIn() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) alert(error.message); else alert('Signed in successfully!');
+        }
 
         async function executeTransmission() {
             const input = document.getElementById('userInput');
@@ -47,31 +69,28 @@
             const text = input.value.trim();
             if(!text) return;
 
-            // 1. Show user message
+            // Get session to pass to Edge Function
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { alert('Please sign in first!'); return; }
+
             canvas.innerHTML += `<div class="message-bubble user">${text}</div>`;
             input.value = '';
-            canvas.scrollTop = canvas.scrollHeight;
 
-            // 2. Fetch from your Cloud Function with Authorization
             try {
-                const response = await fetch('https://jfzncgdujhdnnhrrnzki.supabase.co/functions/v1/chat', {
+                const response = await fetch('https://YOUR_PROJECT_ID.supabase.co/functions/v1/chat', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${ANON_KEY}` 
+                        'Authorization': `Bearer ${session.access_token}` 
                     },
                     body: JSON.stringify({ message: text })
                 });
                 
                 const data = await response.json();
-                
-                // 3. Show AI reply
                 canvas.innerHTML += `<div class="message-bubble ai">${data.reply}</div>`;
             } catch (err) {
-                canvas.innerHTML += `<div class="message-bubble ai" style="color:red;">Error: Connection failed. Check Console.</div>`;
                 console.error(err);
             }
-            canvas.scrollTop = canvas.scrollHeight;
         }
     </script>
 </body>
