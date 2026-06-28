@@ -44,13 +44,19 @@
         </div>
     </div>
 
-  <script>
-    // 1. Initialize Supabase
+ <script>
+    // 1. Initialize Supabase ONCE
+    // Replace these placeholders with your actual project keys!
     const SUPABASE_URL = 'https://jfzncgdujhdnnhrrnzki.supabase.co';
     const ANON_KEY = 'sb_publishable_UDpdCq_sJg9FDatJaM2V_g_q8G8uxSI';
-    const supabase = supabase.createClient(SUPABASE_URL, ANON_KEY);
+    
+    // Check if initialized to prevent the "already declared" error
+    if (!window.supabaseClient) {
+        window.supabaseClient = supabase.createClient(SUPABASE_URL, ANON_KEY);
+    }
+    const supabase = window.supabaseClient;
 
-    // 2. Define functions so they are available to the button clicks
+    // 2. Define functions
     async function signUp() {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
@@ -89,8 +95,10 @@
             
             const data = await response.json();
             canvas.innerHTML += `<div class="message-bubble ai">${data.reply || data.error}</div>`;
+            canvas.scrollTop = canvas.scrollHeight;
         } catch (err) {
             console.error(err);
+            alert('Transmission failed.');
         }
     }
 </script>
